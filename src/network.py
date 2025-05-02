@@ -1,4 +1,4 @@
-# Python packages
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                # Python packages
 from termcolor import colored
 from typing import Dict
 import copy
@@ -10,28 +10,71 @@ from torch import nn
 from torchvision import models
 from torchvision.models.alexnet import AlexNet
 import torch
+import torchvision
+
 
 # Custom packages
-from src.metric import MyAccuracy
+from src.metric import MyAccuracy 
+from src.metric import MyF1Score
 import src.config as cfg
 from src.util import show_setting
 
 
-# [TODO: Optional] Rewrite this class if you want
-class MyNetwork(AlexNet):
-    def __init__(self):
+# [TODO: Optional] Rewrite this class if you wanclass MyNetwork(AlexNet):
+
+class MyNetwork(nn.Module):
+    def __init__(self, num_classes=200, dropout=0.5):
         super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
 
-        # [TODO] Modify feature extractor part in AlexNet
+            nn.Conv2d(64, 128, kernel_size=5, padding=2),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
 
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+
+            nn.Conv2d(256, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.AvgPool2d(kernel_size=3, stride=2)
+        )
+
+        self.avgpool = nn.AdaptiveAvgPool2d((6, 6))
+        self.classifier = nn.Sequential(
+            nn.Dropout(dropout),
+            nn.Linear(128 * 6 * 6, 1024),
+            nn.ReLU(inplace=True),
+            nn.Dropout(dropout),
+            nn.Linear(1024, 512),
+            nn.ReLU(inplace=True),
+            nn.Linear(512, num_classes)
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # [TODO: Optional] Modify this as well if you want
         x = self.features(x)
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.classifier(x)
         return x
+
+models_list = ["resnet50", "alexnet", "mynetwork"]  # 여기에 추가되어야 함
+models_dict = {
+    "resnet50": models.resnet50,
+    "alexnet": torchvision.models.alexnet,
+    "mynetwork": MyNetwork,  # 커스텀 네트워크 등록
+}
+
 
 
 class SimpleClassifier(LightningModule):
